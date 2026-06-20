@@ -7,13 +7,22 @@ export default async function handler(req, res) {
     return res.redirect(302, '/calendar?error=access_denied')
   }
 
+  if (!req.query.code) {
+    return res.redirect(302, '/calendar?error=access_denied')
+  }
+
   const oauth2Client = new google.auth.OAuth2(
     process.env.GOOGLE_CLIENT_ID,
     process.env.GOOGLE_CLIENT_SECRET,
     process.env.GOOGLE_REDIRECT_URI
   )
 
-  const { tokens } = await oauth2Client.getToken(req.query.code)
+  let tokens
+  try {
+    ({ tokens } = await oauth2Client.getToken(req.query.code))
+  } catch {
+    return res.redirect(302, '/calendar?error=token_exchange_failed')
+  }
 
   const supabase = createClient(
     process.env.VITE_SUPABASE_URL,
@@ -27,7 +36,7 @@ export default async function handler(req, res) {
     .maybeSingle()
 
   if (existing) {
-    await supabase
+    const { error: updateError } = await supabase
       .from('tokens')
       .update({
         access_token: tokens.access_token,
@@ -36,12 +45,18 @@ export default async function handler(req, res) {
         updated_at: new Date().toISOString(),
       })
       .eq('id', existing.id)
+    if (updateError) {
+      return res.redirect(302, '/calendar?error=db_write_failed')
+    }
   } else {
-    await supabase.from('tokens').insert({
+    const { error: insertError } = await supabase.from('tokens').insert({
       access_token: tokens.access_token,
       refresh_token: tokens.refresh_token,
       expiry: new Date(tokens.expiry_date).toISOString(),
     })
+    if (insertError) {
+      return res.redirect(302, '/calendar?error=db_write_failed')
+    }
   }
 
   res.redirect(302, '/calendar')
