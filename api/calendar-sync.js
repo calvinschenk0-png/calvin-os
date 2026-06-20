@@ -8,15 +8,14 @@ export default async function handler(req, res) {
     process.env.VITE_SUPABASE_ANON_KEY
   )
 
-  const { data: tokenRow } = await supabase
+  const { data: tokenRow, error: tokenError } = await supabase
     .from('tokens')
     .select('*')
     .limit(1)
     .maybeSingle()
 
-  if (!tokenRow) {
-    return res.status(401).json({ error: 'Not connected' })
-  }
+  if (tokenError) return res.status(500).json({ error: tokenError.message })
+  if (!tokenRow) return res.status(401).json({ error: 'Not connected' })
 
   const oauth2Client = new google.auth.OAuth2(
     process.env.GOOGLE_CLIENT_ID,
@@ -30,16 +29,20 @@ export default async function handler(req, res) {
   })
 
   if (new Date(tokenRow.expiry) <= new Date(Date.now() + 5 * 60 * 1000)) {
-    const { credentials } = await oauth2Client.refreshAccessToken()
-    oauth2Client.setCredentials(credentials)
-    await supabase
-      .from('tokens')
-      .update({
-        access_token: credentials.access_token,
-        expiry: new Date(credentials.expiry_date).toISOString(),
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', tokenRow.id)
+    try {
+      const { credentials } = await oauth2Client.refreshAccessToken()
+      oauth2Client.setCredentials(credentials)
+      await supabase
+        .from('tokens')
+        .update({
+          access_token: credentials.access_token,
+          expiry: new Date(credentials.expiry_date).toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', tokenRow.id)
+    } catch (err) {
+      return res.status(401).json({ error: 'Token refresh failed: ' + err.message })
+    }
   }
 
   const calendar = google.calendar({ version: 'v3', auth: oauth2Client })
@@ -69,9 +72,10 @@ export default async function handler(req, res) {
     }))
 
     if (events.length > 0) {
-      await supabase
+      const { error: upsertError } = await supabase
         .from('calendar_events')
         .upsert(events, { onConflict: 'google_event_id' })
+      if (upsertError) return res.status(500).json({ error: upsertError.message })
     }
 
     res.json({ synced: events.length })
