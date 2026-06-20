@@ -1,4 +1,7 @@
+import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import { Divider } from '../components/ui/Divider'
+import { supabase } from '../lib/supabase'
 
 function getGreeting() {
   const hour = new Date().getHours()
@@ -12,12 +15,6 @@ function formatDate(date) {
   const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
   return `${days[date.getDay()]} — ${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`
 }
-
-const PLACEHOLDER_EVENTS = [
-  { time: '09:00', event: 'Morning standup' },
-  { time: '11:00', event: 'Deep work block' },
-  { time: '14:00', event: 'Team sync' },
-]
 
 const PLACEHOLDER_TASKS = [
   'Review Q3 targets',
@@ -41,6 +38,31 @@ const PLACEHOLDER_STATS = [
 
 export default function Home() {
   const today = new Date()
+
+  const [calendarEvents, setCalendarEvents] = useState(null) // null = loading
+  const [isCalendarConnected, setIsCalendarConnected] = useState(false)
+
+  useEffect(() => {
+    async function loadTodayEvents() {
+      const { data: tokenData } = await supabase.from('tokens').select('id').limit(1)
+      const connected = !!tokenData?.length
+      setIsCalendarConnected(connected)
+      if (!connected) { setCalendarEvents([]); return }
+
+      const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0)
+      const todayEnd   = new Date(); todayEnd.setHours(23, 59, 59, 999)
+
+      const { data } = await supabase
+        .from('calendar_events')
+        .select('id, title, start_at, all_day')
+        .gte('start_at', todayStart.toISOString())
+        .lte('start_at', todayEnd.toISOString())
+        .order('start_at', { ascending: true })
+
+      setCalendarEvents(data || [])
+    }
+    loadTodayEvents()
+  }, [])
 
   return (
     <div className="p-6 md:p-8 max-w-screen-xl mx-auto">
@@ -66,17 +88,45 @@ export default function Home() {
               TODAY
             </h2>
             <div>
-              {PLACEHOLDER_EVENTS.map(({ time, event }) => (
-                <div
-                  key={time}
-                  className="flex items-center gap-4 py-2.5 border-b border-border last:border-0"
-                >
-                  <span className="font-mono text-xs text-muted-foreground w-10 flex-shrink-0">
-                    {time}
-                  </span>
-                  <span className="text-sm text-foreground">{event}</span>
+              {calendarEvents === null ? (
+                [1, 2, 3].map((i) => (
+                  <div key={i} className="flex items-center gap-4 py-2.5 border-b border-border last:border-0">
+                    <div className="w-10 h-2.5 bg-muted flex-shrink-0" />
+                    <div className="h-2.5 bg-muted w-32" />
+                  </div>
+                ))
+              ) : !isCalendarConnected ? (
+                <div className="py-2.5">
+                  <Link
+                    to="/calendar"
+                    className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-150"
+                  >
+                    — Connect Calendar
+                  </Link>
                 </div>
-              ))}
+              ) : calendarEvents.length === 0 ? (
+                <div className="py-2.5">
+                  <span className="text-sm text-muted-foreground">No events today</span>
+                </div>
+              ) : (
+                calendarEvents.map((event) => (
+                  <div
+                    key={event.id}
+                    className="flex items-center gap-4 py-2.5 border-b border-border last:border-0"
+                  >
+                    <span className="font-mono text-xs text-muted-foreground w-10 flex-shrink-0">
+                      {event.all_day
+                        ? 'ALL'
+                        : new Date(event.start_at).toLocaleTimeString('en-US', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            hour12: false,
+                          })}
+                    </span>
+                    <span className="text-sm text-foreground truncate">{event.title}</span>
+                  </div>
+                ))
+              )}
             </div>
           </section>
 
