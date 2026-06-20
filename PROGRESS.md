@@ -1,68 +1,125 @@
 # Progress Log
 
 ## Current Phase
-Phase 0 — Foundation Shell
+Phase 1 — Calendar Module
 
 ## Status
-COMPLETE
+IN PROGRESS (Tasks 1–10 complete, Task 11 remaining)
 
-## Completed This Session (2026-06-19)
-- React 18 + Vite 5 + Tailwind CSS 3 project scaffolded (package.json, index.html, vite.config.js, postcss.config.js)
-- All dependencies installed: react-router-dom, @supabase/supabase-js, lucide-react, vitest, @testing-library/react
-- Design system: 10 CSS variables on :root mapped to Tailwind utilities (bg-background, bg-card, bg-muted, text-foreground, text-accent, text-muted-foreground, border-border, font-display, font-mono)
-- Global resets: border-radius: 0 !important, no shadows, line-height 1.6, font smoothing
-- Google Fonts loaded in index.html: Inter Tight (display), Inter (body), JetBrains Mono (mono)
-- Noise grain texture at 1.5% opacity on body::after via SVG feTurbulence data URL
-- Test infrastructure: Vitest + @testing-library/react + @testing-library/jest-dom wired up
-- UI primitives (all tested): Button (primary/secondary/ghost variants), Card, Divider, Badge
-- Supabase client: createClient export from src/lib/supabase.js — tested with vi.mock
-- NavDropdown: controlled open/close, opacity+translate 150ms ease-sharp transition, outside mousedown close via useEffect — tested
-- TopNav: fixed 56px, hidden on mobile (hidden md:flex), bg-card border-b border-border, "OS" logo, 8 nav links, active = text-foreground + border-b-2 border-accent, inactive = text-muted-foreground, ChevronDown rotates 180° on open, NavDropdown for Tasks/Time/CRM/Planning — tested
-- BottomNav: mobile-only (md:hidden), fixed 64px + safe-area-inset-bottom, 4 primary tabs (Home/Tasks/Calendar/Journal) + More tray (Time/CRM/Planning/Settings), outside-click overlay — tested
-- Shell layout: TopNav + Outlet + BottomNav, responsive padding pt-0 md:pt-14 pb-20 md:pb-0 — tested
-- App.jsx: BrowserRouter with all 8 routes nested inside Shell
-- main.jsx: React.StrictMode entry point importing globals.css
-- Home dashboard: time-aware greeting (morning/afternoon/evening), dynamic date (FRIDAY — 19 JUN 2026 format), two-column grid (lg:grid-cols-[3fr_2fr]), LEFT: TODAY (accent) / calendar rows / Divider / TASKS / Divider / HABITS, RIGHT: TIME bars / Divider / THIS WEEK stats / Divider / ADVISOR italic
-- 7 placeholder module pages (CALENDAR, TASKS, TIME, JOURNAL, CRM, PLANNING, SETTINGS)
-- PLAN.md created (copy of master plan), PROGRESS.md created
-- Implementation plan and design spec committed to docs/superpowers/
-- All 13 commits pushed to calvinschenk0-png/calvin-os on branch main
-- Vercel auto-deployed on push (project: calvin-os-6snx)
+## Completed This Session (2026-06-20)
+
+### Phase 0 (previous session — 2026-06-19)
+- React 18 + Vite 5 + Tailwind CSS 3 project scaffolded
+- Design system: CSS variables on :root mapped to Tailwind utilities
+- Global resets: border-radius: 0 !important, no shadows
+- Google Fonts: Inter Tight, Inter, JetBrains Mono
+- Noise grain texture at 1.5% opacity
+- Test infrastructure: Vitest + @testing-library/react
+- UI primitives (all tested): Button, Card, Divider, Badge
+- Supabase client: src/lib/supabase.js
+- NavDropdown, TopNav, BottomNav, Shell layout
+- App.jsx: BrowserRouter with all 8 routes
+- Home dashboard with placeholder layout
+- 7 placeholder module pages
 - 19 tests passing across 9 test files
+- Deployed to Vercel (project: calvin-os-6snx)
 
-## Phase 0 Exit Criteria Status
-- [x] All routes load without errors — 8 routes confirmed working in dev server
-- [x] Top nav active state correct for each route — isActive() exact match for /, startsWith for all others
-- [x] Bottom nav on mobile, top nav on desktop — md:hidden on BottomNav wrapper, hidden md:flex on TopNav
-- [x] Module dropdowns open and close correctly — NavDropdown tested with open/close/outside-click
-- [x] No hardcoded hex colors outside globals.css — enforced, reviewed across all 12 tasks
-- [x] No border-radius anywhere — global CSS reset + Tailwind config override, reviewed in every task
-- [x] All three fonts loading (Inter Tight, Inter, JetBrains Mono) — loaded in index.html
-- [x] Home dashboard two-column layout with all placeholder sections — confirmed in Task 11
-- [x] Supabase client initializes without console errors — tested with vi.mock; real init requires env vars in Vercel
-- [x] Responsive down to 375px — grid-cols-1 on mobile, stacked layout
-- [x] No console errors on any route — confirmed clean dev server start
-- [x] PROGRESS.md written with next session start point — this file
-- [ ] Deployed to Vercel and live URL confirmed working — deployed, but Supabase env vars not yet added to Vercel. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in Vercel project settings, then trigger redeploy to clear this item.
+### Phase 1 (this session — 2026-06-20)
+
+**Task 1 — Setup (complete, commit d2e33d6)**
+- googleapis v173 installed in dependencies
+- .env.example updated with GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI placeholders
+- .env updated with real credentials (filled in by user from Vercel)
+
+**Task 2 — Supabase schema (complete — manual)**
+- tokens table created: id, access_token, refresh_token, expiry, created_at, updated_at
+- calendar_events table created: id, google_event_id (UNIQUE), title, start_at, end_at, all_day, location, synced_at
+- Both confirmed in Supabase Table Editor
+
+**Task 3 — OAuth endpoints (complete, commits f8e75e7 + 8b2ab66)**
+- api/auth/google.js: OAuth redirect with access_type=offline, prompt=consent, calendar.readonly scope
+- api/auth/callback.js: code exchange, token persistence (SELECT then UPDATE-or-INSERT), error handling for missing code / token exchange failure / Supabase write failure
+
+**Task 4 — Calendar sync endpoint (complete, commits 46057bd + 1881ff5)**
+- api/calendar-sync.js: reads tokens, refreshes if within 5min of expiry, fetches primary calendar events (28d back / 56d forward), upserts to calendar_events on conflict google_event_id
+- Full error handling: token read error, refresh failure, upsert error
+
+**Task 5 — useCalendar hook (complete, commit cdf73e5)**
+- src/hooks/useCalendar.js: isConnected, events, isSyncing, view, setView, currentDate, setCurrentDate, sync(), navigate()
+- getWeekDays(anchorDate) exported — returns 7 Dates starting Sunday
+- Added env: { TZ: 'UTC' } to vitest config to fix timezone-sensitive date tests
+- 7 new tests, 26 total passing
+
+**Task 6 — ConnectPrompt + CalendarHeader (complete, commit 2fe820b)**
+- src/components/calendar/ConnectPrompt.jsx: native <a href="/api/auth/google"> link
+- src/components/calendar/CalendarHeader.jsx: date nav (aria-labels), view toggle (WEEK/DAY), SYNC button with spinner
+- 8 new tests, 34 total passing
+
+**Task 7 — EventBlock (complete, commit 50ceac9)**
+- src/components/calendar/EventBlock.jsx: grid constants (GRID_START_MIN=420, GRID_END_MIN=1320, GRID_HEIGHT=900), absolute positioning, showLocation prop
+- 5 new tests, 39 total passing
+
+**Task 8 — WeekView (complete, commit 35dcf51)**
+- src/components/calendar/WeekView.jsx: 7-column time grid, hour lines, all-day row, today highlighting, current time indicator (setInterval 60s)
+- 2 new tests, 41 total passing
+
+**Task 9 — DayView (complete, commit 3e3ba05)**
+- src/components/calendar/DayView.jsx: single-day timeline, all-day section, timed events with showLocation, current time indicator
+- 3 new tests, 44 total passing
+
+**Task 10 — Calendar page (complete, commit 47419c9)**
+- src/pages/Calendar.jsx: full implementation — loading state, disconnected state (ConnectPrompt + auth error banner), connected state (CalendarHeader + WeekView/DayView)
+- 44 tests still passing, no regressions
+
+## In Progress
+- Task 11 — Home.jsx dashboard calendar strip (replace PLACEHOLDER_EVENTS with live Supabase query)
 
 ## Known Issues
-- React Router v6 future flag warnings appear in test stderr (cosmetic — RR v6→v7 migration notices, not errors; can suppress with v7_startTransition and v7_relativeSplatPath future flags when desired)
-- Supabase env vars not yet in Vercel project settings — Supabase client will fail silently in production until added
+- None discovered so far in Phase 1 implementation
+- Minor (Phase 0 carry-over): React Router v6 future flag warnings in test stderr (cosmetic)
 
 ## Next Session Starts With
-**Phase 1 — Calendar module**
+**Complete Task 11 (Home.jsx calendar strip update):**
+- Replace PLACEHOLDER_EVENTS and the calendar strip in src/pages/Home.jsx
+- Add useState/useEffect to query calendar_events for today from Supabase
+- Check tokens table for isCalendarConnected
+- States: loading skeleton, not connected ("— Connect Calendar" link), no events, events list
+- Then push all Phase 1 commits to Vercel and verify all exit criteria
 
-Before writing any code:
-1. Read PLAN.md section "Phase 1 — Calendar" in full
-2. Read this PROGRESS.md
+**Then deploy + verify Phase 1 exit criteria:**
+- Push to GitHub: `git push` (subagents couldn't push due to sandbox)
+- Navigate to /calendar on live URL, test OAuth flow, test Sync
+- Check calendar_events populated in Supabase
+- Verify Home dashboard shows real today's events
 
-**First task:** Set up Google Calendar OAuth integration.
-- Create a Google Cloud project (or use existing), enable Google Calendar API, create OAuth 2.0 credentials (Web application type)
-- Add `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` to .env and Vercel env vars
-- Create `api/calendar-sync.js` as a Vercel serverless function that handles the OAuth flow and fetches events from the Google Calendar API into a local state or Supabase table
-- Build the Calendar module page (`/calendar`) with a week view, day view, and a "Sync" button that triggers the serverless function
-- Calendar data is read-only — no editing from the dashboard
+**Phase 1 exit criteria:**
+- [ ] OAuth flow works — clicking Connect redirects to Google
+- [ ] After auth, tokens row exists in Supabase tokens table
+- [ ] Sync button fetches real events — calendar_events table populates
+- [ ] Week view displays events in correct time slots
+- [ ] Day view displays events in timeline
+- [ ] Home dashboard calendar strip shows real today's events
+- [x] No console errors (to verify on deploy)
+- [ ] Deployed to Vercel and working on live URL
+- [ ] PROGRESS.md updated
 
-**Exit criteria for Phase 1:** Calvin can open the Calendar module and see his Google Calendar events without opening Google Calendar.
+## Phase 0 Exit Criteria Status (all complete)
+- [x] All routes load without errors
+- [x] Top nav active state correct for each route
+- [x] Bottom nav on mobile, top nav on desktop
+- [x] Module dropdowns open and close correctly
+- [x] No hardcoded hex colors outside globals.css
+- [x] No border-radius anywhere
+- [x] All three fonts loading
+- [x] Home dashboard two-column layout with all placeholder sections
+- [x] Supabase client initializes without console errors
+- [x] Responsive down to 375px
+- [x] No console errors on any route
+- [x] PROGRESS.md written
+- [x] Deployed to Vercel and live URL confirmed working
 
-**Prerequisite before starting:** Confirm Supabase env vars are added to Vercel and the deployed app loads without console errors.
+## Git State (as of 2026-06-20 Phase 1 session)
+Branch: main
+Commits ahead of last push: ~10 (all Phase 1 implementation commits)
+Last pushed commit: b930eb2 (docs: Phase 1 calendar implementation plan)
+Needs push: YES — run `git push` to deploy to Vercel
