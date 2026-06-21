@@ -32,7 +32,7 @@ export function useStats() {
           supabase.from('tasks').select('id').gte('completed_at', monday.toISOString()).lt('completed_at', tomorrow.toISOString()),
           supabase.from('habits').select('id').eq('active', true),
           supabase.from('habit_logs').select('habit_id, date, completed').gte('date', mondayStr).lt('date', tomorrowStr).eq('completed', true),
-          supabase.from('calendar_events').select('start_at, end_at').gte('start_at', monday.toISOString()).lt('start_at', tomorrow.toISOString()),
+          supabase.from('calendar_events').select('start_at, end_at').gte('start_at', monday.toISOString()).lt('start_at', tomorrow.toISOString()).eq('all_day', false),
         ])
 
       const habitCount = allHabits?.length || 0
