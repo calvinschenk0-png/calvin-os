@@ -5,6 +5,7 @@ import { NavDropdown } from './NavDropdown'
 
 const NAV_LINKS = [
   { label: 'HOME', path: '/' },
+  { label: 'PLAN', path: '/plan' },
   { label: 'CALENDAR', path: '/calendar' },
   {
     label: 'TASKS', path: '/tasks',

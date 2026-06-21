@@ -1,7 +1,14 @@
-import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Divider } from '../components/ui/Divider'
 import { supabase } from '../lib/supabase'
+import { useState, useEffect } from 'react'
+import { useTasks } from '../hooks/useTasks'
+import { useHabits } from '../hooks/useHabits'
+import { useStats } from '../hooks/useStats'
+import { QuickAddTask } from '../components/home/QuickAddTask'
+import { TaskList } from '../components/home/TaskList'
+import { HabitList } from '../components/home/HabitList'
+import { StatsPanel } from '../components/home/StatsPanel'
 
 function getGreeting() {
   const hour = new Date().getHours()
@@ -16,31 +23,13 @@ function formatDate(date) {
   return `${days[date.getDay()]} — ${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`
 }
 
-const PLACEHOLDER_TASKS = [
-  'Review Q3 targets',
-  'Send proposal to client',
-  'Update project notes',
-]
-
-const PLACEHOLDER_HABITS = ['Exercise', 'Read', 'Meditate', 'Journal']
-
-const PLACEHOLDER_TIME_BLOCKS = [
-  { label: 'Deep Work', width: '75%' },
-  { label: 'Meetings', width: '40%' },
-  { label: 'Admin', width: '25%' },
-]
-
-const PLACEHOLDER_STATS = [
-  { label: 'HOURS LOGGED', value: '—' },
-  { label: 'TASKS DONE', value: '—' },
-  { label: 'HABITS HIT', value: '—' },
-]
-
 export default function Home() {
   const today = new Date()
-
-  const [calendarEvents, setCalendarEvents] = useState(null) // null = loading
+  const [calendarEvents, setCalendarEvents] = useState(null)
   const [isCalendarConnected, setIsCalendarConnected] = useState(false)
+  const { tasks, addTask, toggleTask } = useTasks()
+  const { habits, logs, toggleHabit, addHabit, deleteHabit } = useHabits()
+  const stats = useStats()
 
   useEffect(() => {
     async function loadTodayEvents() {
@@ -48,17 +37,14 @@ export default function Home() {
       const connected = !!tokenData?.length
       setIsCalendarConnected(connected)
       if (!connected) { setCalendarEvents([]); return }
-
       const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0)
-      const todayEnd   = new Date(); todayEnd.setHours(23, 59, 59, 999)
-
+      const todayEnd = new Date(); todayEnd.setHours(23, 59, 59, 999)
       const { data } = await supabase
         .from('calendar_events')
         .select('id, title, start_at, all_day')
         .gte('start_at', todayStart.toISOString())
         .lte('start_at', todayEnd.toISOString())
         .order('start_at', { ascending: true })
-
       setCalendarEvents(data || [])
     }
     loadTodayEvents()
@@ -66,7 +52,6 @@ export default function Home() {
 
   return (
     <div className="p-6 md:p-8 max-w-screen-xl mx-auto">
-      {/* Header */}
       <div className="mb-10">
         <h1 className="font-display font-bold text-5xl md:text-6xl leading-none tracking-[-0.05em] text-foreground">
           {getGreeting()}, Calvin
@@ -76,10 +61,7 @@ export default function Home() {
         </p>
       </div>
 
-      {/* Two-column grid */}
       <div className="grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-8">
-
-        {/* LEFT COLUMN */}
         <div className="space-y-6">
 
           {/* Calendar strip */}
@@ -89,7 +71,7 @@ export default function Home() {
             </h2>
             <div>
               {calendarEvents === null ? (
-                [1, 2, 3].map((i) => (
+                [1, 2, 3].map(i => (
                   <div key={i} className="flex items-center gap-4 py-2.5 border-b border-border last:border-0">
                     <div className="w-10 h-2.5 bg-muted flex-shrink-0" />
                     <div className="h-2.5 bg-muted w-32" />
@@ -97,10 +79,7 @@ export default function Home() {
                 ))
               ) : !isCalendarConnected ? (
                 <div className="py-2.5">
-                  <Link
-                    to="/calendar"
-                    className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-150"
-                  >
+                  <Link to="/calendar" className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-150">
                     — Connect Calendar
                   </Link>
                 </div>
@@ -109,24 +88,23 @@ export default function Home() {
                   <span className="text-sm text-muted-foreground">No events today</span>
                 </div>
               ) : (
-                calendarEvents.map((event) => (
-                  <div
-                    key={event.id}
-                    className="flex items-center gap-4 py-2.5 border-b border-border last:border-0"
-                  >
+                calendarEvents.map(event => (
+                  <div key={event.id} className="flex items-center gap-4 py-2.5 border-b border-border last:border-0">
                     <span className="font-mono text-xs text-muted-foreground w-10 flex-shrink-0">
-                      {event.all_day
-                        ? 'ALL'
-                        : new Date(event.start_at).toLocaleTimeString('en-US', {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                            hour12: false,
-                          })}
+                      {event.all_day ? 'ALL' : new Date(event.start_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}
                     </span>
                     <span className="text-sm text-foreground truncate">{event.title}</span>
                   </div>
                 ))
               )}
+            </div>
+            <div className="mt-4">
+              <Link
+                to="/plan"
+                className="inline-block font-mono text-xs uppercase tracking-[0.2em] px-4 py-2 bg-accent text-accent-foreground hover:opacity-90 transition-opacity duration-150"
+              >
+                Plan My Day →
+              </Link>
             </div>
           </section>
 
@@ -137,82 +115,41 @@ export default function Home() {
             <h2 className="font-mono text-xs uppercase tracking-[0.2em] text-muted-foreground mb-4">
               TASKS
             </h2>
-            <div className="space-y-2">
-              {PLACEHOLDER_TASKS.map((task) => (
-                <div key={task} className="flex items-center gap-3 py-1">
-                  <div className="w-4 h-4 border border-border flex-shrink-0" />
-                  <span className="text-sm text-foreground">{task}</span>
-                </div>
-              ))}
-            </div>
+            <QuickAddTask onAdd={addTask} />
+            <TaskList tasks={tasks} onToggle={toggleTask} />
           </section>
 
           <Divider />
 
-          {/* Habits */}
-          <section>
-            <h2 className="font-mono text-xs uppercase tracking-[0.2em] text-muted-foreground mb-4">
-              HABITS
-            </h2>
-            <div className="flex flex-wrap gap-5">
-              {PLACEHOLDER_HABITS.map((habit) => (
-                <div key={habit} className="flex items-center gap-2">
-                  <div className="w-4 h-4 border border-border flex-shrink-0" />
-                  <span className="text-sm text-foreground">{habit}</span>
-                </div>
-              ))}
-            </div>
-          </section>
+          <HabitList
+            habits={habits}
+            logs={logs}
+            onToggle={toggleHabit}
+            onAdd={addHabit}
+            onDelete={deleteHabit}
+          />
         </div>
 
-        {/* RIGHT COLUMN */}
         <div className="space-y-6">
-
-          {/* Time blocks */}
+          {/* Right column — TIME placeholder stays, stats and advisor are wired */}
           <section>
             <h2 className="font-mono text-xs uppercase tracking-[0.2em] text-muted-foreground mb-4">
               TIME
             </h2>
-            <div className="space-y-2.5">
-              {PLACEHOLDER_TIME_BLOCKS.map(({ label, width }) => (
-                <div key={label} className="flex items-center gap-3">
-                  <span className="font-mono text-xs text-muted-foreground w-20 flex-shrink-0">
-                    {label}
-                  </span>
-                  <div
-                    className="h-2 bg-muted border border-border"
-                    style={{ width }}
-                  />
-                </div>
-              ))}
-            </div>
+            <p className="text-sm text-muted-foreground">Time audit coming in Phase 4.</p>
           </section>
 
           <Divider />
 
-          {/* This week stats */}
           <section>
             <h2 className="font-mono text-xs uppercase tracking-[0.2em] text-muted-foreground mb-4">
               THIS WEEK
             </h2>
-            <div>
-              {PLACEHOLDER_STATS.map(({ label, value }) => (
-                <div
-                  key={label}
-                  className="flex items-center justify-between py-2 border-b border-border last:border-0"
-                >
-                  <span className="font-mono text-xs uppercase tracking-widest text-muted-foreground">
-                    {label}
-                  </span>
-                  <span className="font-mono text-sm text-foreground">{value}</span>
-                </div>
-              ))}
-            </div>
+            <StatsPanel stats={stats} />
           </section>
 
           <Divider />
 
-          {/* Advisor */}
           <section>
             <h2 className="font-mono text-xs uppercase tracking-[0.2em] text-muted-foreground mb-4">
               ADVISOR

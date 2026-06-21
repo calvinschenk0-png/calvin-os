@@ -8,6 +8,7 @@ import Journal from './pages/Journal'
 import CRM from './pages/CRM'
 import Planning from './pages/Planning'
 import Settings from './pages/Settings'
+import Plan from './pages/Plan'
 
 export default function App() {
   return (
@@ -22,6 +23,7 @@ export default function App() {
           <Route path="/crm" element={<CRM />} />
           <Route path="/planning" element={<Planning />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/plan" element={<Plan />} />
         </Route>
       </Routes>
     </BrowserRouter>
