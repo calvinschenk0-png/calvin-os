@@ -29,6 +29,12 @@ Phase 2 exit criteria (from PLAN.md):
 
 ---
 
+## Future Enhancements
+
+- **Calendar** — make fully interactive with add/edit/delete events via Google Calendar API
+
+---
+
 ## Phase 1 — Calendar Module — COMPLETE (2026-06-20)
 
 ### Exit Criteria (all verified on live Vercel URL)
