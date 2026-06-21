@@ -11,14 +11,18 @@ export function useTasks() {
 
   const fetchTasks = useCallback(async () => {
     setIsLoading(true)
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('tasks')
       .select('*')
       .eq('due_date', todayStr())
       .in('status', ['open', 'done'])
       .order('priority', { ascending: true })
       .order('created_at', { ascending: true })
-    setTasks(data || [])
+    if (error) {
+      console.error('useTasks fetchTasks:', error)
+    } else {
+      setTasks(data || [])
+    }
     setIsLoading(false)
   }, [])
 
