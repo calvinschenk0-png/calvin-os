@@ -1,10 +1,30 @@
 # Progress Log
 
 ## Current Phase
-Phase 3 — TBD
+Phase 3 — TBD (not started)
 
 ## Status
-Phase 2 complete. Planning Phase 3.
+Phase 2 complete and deployed. Next session: decide Phase 3 scope (brainstorm), then build.
+
+## Next Session Starts With
+
+1. Open https://calvin-os.vercel.app and smoke-test the Phase 2 features manually:
+   - Add a task via quick-add on Home
+   - Toggle a task done
+   - Toggle a habit, add a habit, delete a habit
+   - Check THIS WEEK stats update
+   - Click PLAN MY DAY → verify /plan loads with today's calendar events and gap slots
+   - Drag a task into a gap slot on /plan
+2. If anything is broken, fix it before starting Phase 3.
+3. Brainstorm Phase 3 scope (candidates: full Tasks page with filtering/types, Journal module, CRM contacts, deeper time tracking).
+
+## Known Issues / Tech Debt
+
+- `useStats` shows `0`, `0/0 days`, `0h` briefly on first paint (no loading skeleton) — cosmetic only
+- `addHabit` / `addTask` Supabase insert errors are silently swallowed (no `console.error`) — low impact for single-user dashboard, but inconsistent with `fetchTasks` which does log errors
+- `durationLabel` helper function is duplicated in both `GapSlot.jsx` and `PlanTimeline.jsx` — extract to `src/components/plan/utils.js` when next touching those files
+- DnD assignments on /plan are session-only (by design) — refreshing the page clears them. This is intentional per spec.
+- React Router future-flag deprecation warnings in test output — benign, no action needed until React Router v7 upgrade
 
 ## Phase 2 — Daily Planning View — COMPLETE (2026-06-20)
 
@@ -26,19 +46,30 @@ Phase 2 complete. Planning Phase 3.
 ### What Was Built
 - `src/hooks/useTasks.js` — today's tasks, optimistic add, toggle completion
 - `src/hooks/useHabits.js` — active habits + today's logs, toggle/add/delete
-- `src/hooks/useStats.js` — weekly task count, habit streak, calendar hours
+- `src/hooks/useStats.js` — weekly task count, habit streak, calendar hours (local-time date strings)
 - `src/components/home/QuickAddTask.jsx` — Enter-to-submit task input
 - `src/components/home/TaskList.jsx` — task list with completion checkbox
 - `src/components/home/HabitList.jsx` — habit checkboxes with inline add/delete
 - `src/components/home/StatsPanel.jsx` — THIS WEEK stats panel
-- `src/components/plan/PlanTimeline.jsx` — calendar events + computed gap slots
+- `src/components/plan/PlanTimeline.jsx` — calendar events + computed gap slots (≥15min)
 - `src/components/plan/PlanTaskList.jsx` — draggable task cards (@dnd-kit/core)
 - `src/components/plan/GapSlot.jsx` — droppable free-time block
 - `src/components/plan/AssignedTask.jsx` — task rendered inside a gap after drop
 - `src/pages/Home.jsx` — all placeholder sections replaced with live components
 - `src/pages/Plan.jsx` — /plan page with DndContext, assignment state, DragOverlay
 - `src/App.jsx` — /plan route registered
-- `src/components/layout/TopNav.jsx` — PLAN nav link added
+- `src/components/layout/TopNav.jsx` — PLAN nav link added (before SETTINGS)
+
+### Supabase Tables Added This Phase
+- `tasks` — title, type, status, priority, due_date, project_id, completed_at
+- `habits` — name, active, sort_order (seeded: Gym, Creatine, Stretch, Read)
+- `habit_logs` — habit_id, date, completed (UNIQUE on habit_id+date)
+- `projects` — title, status, area (created but not yet used in UI)
+
+### Bugs Fixed This Session
+- `useStats` was using `toISOString()` for habit log date comparisons — wrong date west of UTC late at night. Fixed with `localDateStr()` helper using local `getFullYear/Month/Date`.
+- `useCalendar` / stats calendar hours query was missing `.eq('all_day', false)` — all-day events were inflating HOURS LOGGED. Fixed.
+- `useTasks.fetchTasks` was silently swallowing Supabase errors — added `console.error` and kept existing task list on error.
 
 ---
 
