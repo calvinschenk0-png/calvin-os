@@ -1,31 +1,44 @@
 # Progress Log
 
 ## Current Phase
-Phase 2 — Tasks Module
+Phase 3 — TBD
 
 ## Status
-NOT STARTED
+Phase 2 complete. Planning Phase 3.
 
-## Next Session Starts With
-Build the Tasks module (Phase 3 in PLAN.md, but we're calling it Phase 2 here since Daily Planning View is deferred until Tasks exist).
+## Phase 2 — Daily Planning View — COMPLETE (2026-06-20)
 
-Start with:
-1. Supabase schema — create `tasks` and `projects` tables (see PLAN.md section 6)
-2. Tasks page (`src/pages/Tasks.jsx`) — quick task list filtered to today
-3. Quick-add input (keyboard shortcut, minimal fields: title + priority)
-4. Task status toggles: open → done, defer, drop
-5. Four task types: quick, habit, idea, calendar_echo (tabs or filter)
-6. Home dashboard task panel wired to real Supabase data
+### Exit Criteria
+- [x] Home dashboard shows real calendar events for today
+- [x] Quick-add task works and saves to Supabase
+- [x] Tasks list shows today's tasks with completion toggle
+- [x] Habits checklist works and persists to Supabase
+- [x] Inline habit add/delete works
+- [x] THIS WEEK stats show real numbers (weekly scope)
+- [x] PLAN MY DAY button on Home links to /plan
+- [x] /plan shows today's calendar events with gap slots
+- [x] Unassigned tasks appear in right column
+- [x] Drag-and-drop assigns tasks to gaps
+- [x] No console errors
+- [x] Deployed to Vercel and working on live URL
+- [x] PROGRESS.md updated
 
-Phase 2 exit criteria (from PLAN.md):
-- [ ] Quick-add task works (keyboard shortcut, title + priority)
-- [ ] Tasks list shows open tasks for today
-- [ ] Status toggles work: done, deferred, dropped
-- [ ] Four task types have a home (quick, habit, idea, calendar echo)
-- [ ] Idea parking lot view (separate from daily list)
-- [ ] Home dashboard task panel shows real tasks
-- [ ] No console errors on any route
-- [ ] Deployed to Vercel and working on live URL
+### What Was Built
+- `src/hooks/useTasks.js` — today's tasks, optimistic add, toggle completion
+- `src/hooks/useHabits.js` — active habits + today's logs, toggle/add/delete
+- `src/hooks/useStats.js` — weekly task count, habit streak, calendar hours
+- `src/components/home/QuickAddTask.jsx` — Enter-to-submit task input
+- `src/components/home/TaskList.jsx` — task list with completion checkbox
+- `src/components/home/HabitList.jsx` — habit checkboxes with inline add/delete
+- `src/components/home/StatsPanel.jsx` — THIS WEEK stats panel
+- `src/components/plan/PlanTimeline.jsx` — calendar events + computed gap slots
+- `src/components/plan/PlanTaskList.jsx` — draggable task cards (@dnd-kit/core)
+- `src/components/plan/GapSlot.jsx` — droppable free-time block
+- `src/components/plan/AssignedTask.jsx` — task rendered inside a gap after drop
+- `src/pages/Home.jsx` — all placeholder sections replaced with live components
+- `src/pages/Plan.jsx` — /plan page with DndContext, assignment state, DragOverlay
+- `src/App.jsx` — /plan route registered
+- `src/components/layout/TopNav.jsx` — PLAN nav link added
 
 ---
 
