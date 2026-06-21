@@ -1,6 +1,13 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 
+function localDateStr(date) {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
 function getWeekBounds() {
   const now = new Date()
   const dayOfWeek = now.getDay()
@@ -24,8 +31,8 @@ export function useStats() {
   useEffect(() => {
     async function fetchStats() {
       const { monday, tomorrow } = getWeekBounds()
-      const mondayStr = monday.toISOString().split('T')[0]
-      const tomorrowStr = tomorrow.toISOString().split('T')[0]
+      const mondayStr = localDateStr(monday)
+      const tomorrowStr = localDateStr(tomorrow)
 
       const [{ data: doneTasks }, { data: allHabits }, { data: habitLogs }, { data: calEvents }] =
         await Promise.all([
@@ -46,7 +53,7 @@ export function useStats() {
         for (let i = 0; i < daysTotal; i++) {
           const d = new Date(monday)
           d.setDate(d.getDate() + i)
-          const dateStr = d.toISOString().split('T')[0]
+          const dateStr = localDateStr(d)
           const logsForDay = (habitLogs || []).filter(l => l.date === dateStr)
           if (logsForDay.length >= habitCount) daysHit++
         }
