@@ -1,22 +1,21 @@
 # Progress Log
 
 ## Current Phase
-Phase 3 — TBD (not started)
+Phase 3 — Tasks Module
 
 ## Status
-Phase 2 complete and deployed. Next session: decide Phase 3 scope (brainstorm), then build.
+IN PROGRESS — Tasks page built, not yet deployed to Vercel.
 
 ## Next Session Starts With
 
-1. Open https://calvin-os.vercel.app and smoke-test the Phase 2 features manually:
-   - Add a task via quick-add on Home
-   - Toggle a task done
-   - Toggle a habit, add a habit, delete a habit
-   - Check THIS WEEK stats update
-   - Click PLAN MY DAY → verify /plan loads with today's calendar events and gap slots
-   - Drag a task into a gap slot on /plan
-2. If anything is broken, fix it before starting Phase 3.
-3. Brainstorm Phase 3 scope (candidates: full Tasks page with filtering/types, Journal module, CRM contacts, deeper time tracking).
+1. Verify Phase 3 on live Vercel URL (https://calvin-os.vercel.app/tasks):
+   - Quick Tasks tab: add a task via quick-add (type something and Enter), also press N to trigger keyboard shortcut
+   - Toggle a task done, defer a task, drop a task
+   - Click priority badge to cycle P1→P2→P3
+   - Switch to Ideas tab: add an idea
+   - Switch to Habits tab: verify habits appear and toggle works
+   - Switch to Projects tab: add a project with an area
+2. Decide and begin Phase 4 scope (Journal or Time Audit).
 
 ## Known Issues / Tech Debt
 
@@ -25,6 +24,35 @@ Phase 2 complete and deployed. Next session: decide Phase 3 scope (brainstorm), 
 - `durationLabel` helper function is duplicated in both `GapSlot.jsx` and `PlanTimeline.jsx` — extract to `src/components/plan/utils.js` when next touching those files
 - DnD assignments on /plan are session-only (by design) — refreshing the page clears them. This is intentional per spec.
 - React Router future-flag deprecation warnings in test output — benign, no action needed until React Router v7 upgrade
+
+## Phase 3 — Tasks Module — IN PROGRESS (2026-06-27)
+
+### Exit Criteria
+- [ ] /tasks loads with 4 tabs: Quick Tasks, Ideas, Habits, Projects
+- [ ] Quick Tasks tab: add task via type+Enter and via N keyboard shortcut
+- [ ] Toggle task done/open, cycle priority P1→P2→P3 by clicking badge
+- [ ] Defer and drop tasks from the ... menu
+- [ ] Ideas tab: add idea, toggle done, drop
+- [ ] Habits tab: shows habits, toggle works, add/delete works
+- [ ] Projects tab: add project with area, archive project
+- [ ] TASKS nav dropdown links navigate to correct tabs
+- [ ] No console errors on any tab
+- [ ] Deployed to Vercel and live URL working
+
+### What Was Built
+- `src/hooks/useTasksPage.js` — flexible tasks hook (by type, all statuses, full CRUD)
+- `src/hooks/useProjects.js` — projects CRUD
+- `src/components/tasks/TaskRow.jsx` — task item with checkbox, priority badge (click to cycle), defer/drop/delete menu
+- `src/components/tasks/TaskQuickAdd.jsx` — quick-add input with N keyboard shortcut
+- `src/components/tasks/StatusFilter.jsx` — OPEN/ALL/DONE/DEFERRED filter pills
+- `src/components/tasks/QuickTasksTab.jsx` — today's quick tasks view
+- `src/components/tasks/IdeasTab.jsx` — ideas parking lot
+- `src/components/tasks/HabitsTab.jsx` — habits view (reuses useHabits)
+- `src/components/tasks/ProjectsTab.jsx` — projects list with add/archive
+- `src/pages/Tasks.jsx` — tab controller using URL search params (?tab=quick|ideas|habits|projects)
+- `src/components/layout/TopNav.jsx` — TASKS dropdown updated with ?tab= query params
+
+---
 
 ## Phase 2 — Daily Planning View — COMPLETE (2026-06-20)
 

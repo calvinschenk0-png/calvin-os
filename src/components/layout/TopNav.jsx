@@ -9,10 +9,10 @@ const NAV_LINKS = [
   {
     label: 'TASKS', path: '/tasks',
     children: [
-      { label: 'QUICK TASKS', path: '/tasks' },
-      { label: 'HABITS', path: '/tasks' },
-      { label: 'IDEAS', path: '/tasks' },
-      { label: 'PROJECTS', path: '/tasks' },
+      { label: 'QUICK TASKS', path: '/tasks?tab=quick' },
+      { label: 'HABITS', path: '/tasks?tab=habits' },
+      { label: 'IDEAS', path: '/tasks?tab=ideas' },
+      { label: 'PROJECTS', path: '/tasks?tab=projects' },
     ],
   },
   {
