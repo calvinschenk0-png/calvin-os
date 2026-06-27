@@ -4,18 +4,18 @@
 Phase 3 — Tasks Module
 
 ## Status
-IN PROGRESS — Tasks page built, not yet deployed to Vercel.
+DEPLOYED — Phase 3 Tasks module pushed to GitHub and deployed to Vercel (2026-06-27). Needs manual smoke-test on live URL.
 
 ## Next Session Starts With
 
-1. Verify Phase 3 on live Vercel URL (https://calvin-os.vercel.app/tasks):
-   - Quick Tasks tab: add a task via quick-add (type something and Enter), also press N to trigger keyboard shortcut
-   - Toggle a task done, defer a task, drop a task
+1. Smoke-test Phase 3 on https://calvin-os.vercel.app/tasks:
+   - Quick Tasks tab: add a task via type+Enter, press N shortcut, toggle done, defer, drop
    - Click priority badge to cycle P1→P2→P3
-   - Switch to Ideas tab: add an idea
-   - Switch to Habits tab: verify habits appear and toggle works
-   - Switch to Projects tab: add a project with an area
-2. Decide and begin Phase 4 scope (Journal or Time Audit).
+   - Ideas tab: add an idea, toggle done, drop
+   - Habits tab: habits appear, toggle works, add/delete works
+   - Projects tab: add project with area, archive it
+   - TASKS nav dropdown → each item opens the correct tab
+2. Fix any issues found, then begin Phase 4 (Journal module — see PLAN.md Phase 5).
 
 ## Known Issues / Tech Debt
 
@@ -25,7 +25,7 @@ IN PROGRESS — Tasks page built, not yet deployed to Vercel.
 - DnD assignments on /plan are session-only (by design) — refreshing the page clears them. This is intentional per spec.
 - React Router future-flag deprecation warnings in test output — benign, no action needed until React Router v7 upgrade
 
-## Phase 3 — Tasks Module — IN PROGRESS (2026-06-27)
+## Phase 3 — Tasks Module — DEPLOYED, PENDING VERIFICATION (2026-06-27)
 
 ### Exit Criteria
 - [ ] /tasks loads with 4 tabs: Quick Tasks, Ideas, Habits, Projects
