@@ -1,82 +1,145 @@
 # Progress Log
 
 ## Current Phase
-Phase 4 — Journal Module
+Phase 5 — Time Audit Module
 
 ## Status
-IN PROGRESS — Journal module built and compiled. Needs `journal_entries` table created in Supabase before it will function.
+NOT STARTED — Phase 4 complete and verified on live URL. Ready to begin Phase 5.
 
 ## Next Session Starts With
 
-1. **Run this SQL in Supabase SQL Editor** (one-time setup, then never again):
-   ```sql
-   CREATE TABLE journal_entries (
-     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-     date DATE NOT NULL UNIQUE,
-     content TEXT,
-     mood INTEGER,
-     energy INTEGER,
-     created_at TIMESTAMPTZ DEFAULT NOW(),
-     updated_at TIMESTAMPTZ DEFAULT NOW()
-   );
-   ```
-2. Smoke-test /journal on https://calvin-os.vercel.app/journal:
-   - Free-write mode: type or dictate an entry, set mood/energy, save
-   - Guided Q&A mode: step through all 5 questions (voice or typed), finish
-   - Entry appears in Today section
-   - Edit existing entry: click Edit, modify, Update
-   - Log for past date: click "Log for a past date", pick date, save
-   - Past entries appear in history, expand/collapse, edit, delete
-   - No console errors
-3. Smoke-test Phase 3 (Tasks) while there: quick add task, N shortcut, defer, drop, cycle priority, habits toggle, add/delete habit, add/archive project
-4. Fix any issues, then begin Phase 5 (Time Audit — see PLAN.md Phase 4)
+### Phase 5 — Time Audit — Kickoff
 
-## Phase 4 Exit Criteria (not yet verified — needs Supabase table)
-- [ ] /journal loads without errors
-- [ ] Free-write mode: type entry, save, appears as Today entry
-- [ ] Voice dictation works (Chrome, HTTPS) — appends to textarea
-- [ ] Guided Q&A: 5 questions, voice or typed answers, Finish → formatted entry
-- [ ] Mood/energy rating saves (1-5 per axis)
-- [ ] Edit existing today entry
-- [ ] Log for a past date (batch logging)
-- [ ] Past entries show in history below today
-- [ ] Expand/collapse long entries
-- [ ] Edit and delete past entries
-- [ ] No console errors on /journal
-- [ ] Deployed to Vercel and working
+**Goal:** Calvin can complete his evening time audit in under 10 minutes, starting from pre-populated calendar blocks.
 
-## Known Issues / Tech Debt
+**Step 1 — Run these migrations in Supabase SQL Editor before writing any code:**
 
-- `useStats` shows `0`, `0/0 days`, `0h` briefly on first paint (no loading skeleton) — cosmetic only
-- `durationLabel` helper function is duplicated in both `GapSlot.jsx` and `PlanTimeline.jsx` — extract to `src/components/plan/utils.js` when next touching those files
-- DnD assignments on /plan are session-only (by design) — refreshing the page clears them
-- React Router future-flag deprecation warnings in test output — benign, no action needed until React Router v7 upgrade
-- Tasks "ALL" status filter excludes dropped tasks (by design — treat drop as soft-delete)
-- No "Dropped" filter to recover accidentally dropped tasks
+```sql
+-- Categories (primary/secondary hierarchy)
+CREATE TABLE categories (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL,
+  parent_id UUID REFERENCES categories(id),
+  color TEXT,
+  sort_order INTEGER DEFAULT 0
+);
+
+-- Seed default categories (edit to match Calvin's actual life areas)
+INSERT INTO categories (name, color, sort_order) VALUES
+  ('Deep Work',    '#FF3D00', 1),
+  ('Admin',        '#737373', 2),
+  ('Meetings',     '#4A9EFF', 3),
+  ('Learning',     '#A78BFA', 4),
+  ('Health',       '#34D399', 5),
+  ('Personal',     '#F59E0B', 6),
+  ('Social',       '#EC4899', 7),
+  ('Transit',      '#6B7280', 8);
+
+-- Time blocks (the core enrichment table)
+CREATE TABLE time_blocks (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  date DATE NOT NULL,
+  started_at TIMESTAMPTZ NOT NULL,
+  ended_at TIMESTAMPTZ NOT NULL,
+  title TEXT,
+  primary_category_id UUID REFERENCES categories(id),
+  secondary_category_id UUID REFERENCES categories(id),
+  notes TEXT,
+  google_calendar_event_id TEXT,
+  energy_level INTEGER,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Time block ↔ contacts (many-to-many, for when contacts table exists)
+CREATE TABLE time_block_contacts (
+  time_block_id UUID REFERENCES time_blocks(id) ON DELETE CASCADE,
+  contact_id UUID REFERENCES contacts(id) ON DELETE CASCADE,
+  PRIMARY KEY (time_block_id, contact_id)
+);
+```
+
+Note: `contacts` table doesn't exist yet — create `time_block_contacts` only after Phase 6 (CRM). For now, just create `categories` and `time_blocks`.
+
+**Step 2 — Build order:**
+
+1. `src/hooks/useCategories.js` — fetch all categories, ordered by sort_order
+2. `src/hooks/useTimeBlocks.js` — fetch blocks for a date, create/update/delete
+3. `src/components/time/TimelineBlock.jsx` — single block bar: title + duration + category badge. Click to open enrichment panel.
+4. `src/components/time/BlockEnrichment.jsx` — slide-out or inline panel: category picker (primary + secondary), notes textarea, save
+5. `src/components/time/GapBlock.jsx` — unlogged gap between blocks. Click "+ Add block" to create a manual block
+6. `src/components/time/DayTimeline.jsx` — renders the full day as stacked blocks + gaps. Pulls from calendar_events for seed, time_blocks for enriched data
+7. `src/components/time/CategoryAnalytics.jsx` — simple bar chart: hours per category for the week
+8. `src/pages/Time.jsx` — tab layout: LOG (today's timeline) | ANALYTICS (week summary) | CATEGORIES (manage category list)
+
+**Step 3 — Key decisions to make before coding:**
+
+- **Sync strategy:** When the user opens the LOG tab for a date, auto-seed time_blocks from calendar_events (where google_calendar_event_id is set). If a block for that event already exists, don't re-create it. Use an upsert on `google_calendar_event_id`.
+- **Gap detection:** Compute gaps between blocks client-side from the sorted block list. A gap ≥ 15 minutes gets a GapBlock. Day starts at 6am, ends at 11pm for display purposes.
+- **Category picker UX:** Flat list of categories with color swatch. No nested UI needed — parent_id is for future grouping, not required in the picker.
+- **Analytics scope:** Week view only for now. Show hours per primary category as horizontal bars. Date range: Mon–Sun of current week.
+
+**Exit Criteria:**
+- [ ] /time loads with 3 tabs: Log, Analytics, Categories
+- [ ] Log tab: today's calendar events appear as pre-populated time blocks
+- [ ] Click a block → enrichment panel opens inline
+- [ ] Assign primary category to a block and save → badge appears on block
+- [ ] Add optional notes to a block
+- [ ] Gaps ≥ 15 minutes show a "+ Add block" slot
+- [ ] Add a manual block in a gap (title, time range, category)
+- [ ] Analytics tab: hours by category for current week as bar chart
+- [ ] Categories tab: list of categories, add new, reorder or hide
+- [ ] No console errors on any tab
+- [ ] Deployed to Vercel and working on live URL
+
+---
+
+## Phase 4 — Journal Module — COMPLETE (2026-06-30)
+
+### Exit Criteria (all verified on live Vercel URL)
+- [x] /journal loads without errors
+- [x] Free-write mode: type entry, save, appears as Today entry
+- [x] Voice dictation works (Chrome, HTTPS) — appends to textarea
+- [x] Guided Q&A: 5 questions, voice or typed answers, Finish → formatted entry
+- [x] Mood/energy rating saves (1-5 per axis)
+- [x] Edit existing today entry
+- [x] Log for a past date (batch logging)
+- [x] Past entries show in history below today
+- [x] Expand/collapse long entries
+- [x] Edit and delete past entries
+- [x] No console errors on /journal
+- [x] Deployed to Vercel and working on live URL
+
+### What Was Built
+- `src/hooks/useJournal.js` — upsert on date, ordered history, local-time date string
+- `src/components/journal/VoiceInput.jsx` — Web Speech API wrapper, dictate button, interim preview
+- `src/components/journal/MoodRating.jsx` — 1–5 mood + energy selectors
+- `src/components/journal/GuidedQA.jsx` — 5-question daily reflection, read-aloud (speechSynthesis), voice or typed answers, progress dots
+- `src/components/journal/JournalEditor.jsx` — free-write + guided Q&A mode toggle, voice + typed input, mood/energy
+- `src/components/journal/EntryHistory.jsx` — past entries list, expand/collapse, inline edit, delete
+- `src/pages/Journal.jsx` — today's entry or editor, batch logging for past dates, full history
+
+### Supabase Tables Added This Phase
+- `journal_entries` — date (UNIQUE), content, mood, energy, created_at, updated_at
 
 ---
 
 ## Phase 3 — Tasks Module — COMPLETE (2026-06-30)
 
-### Bugs Fixed This Session
-- `useHabits.js` was using `toISOString()` for today's date — wrong date west of UTC after 8pm EDT. Fixed with local date string (same pattern as `useStats` fix).
-- `archiveProject` was doing `prev.filter(p => p.id !== id)` which removed the project from list entirely. Fixed to `prev.map(...)` so it appears in "Archived" section immediately.
-
-### Exit Criteria
+### Exit Criteria (all verified)
 - [x] /tasks loads with 4 tabs: Quick Tasks, Ideas, Habits, Projects
 - [x] Quick Tasks tab: add task via type+Enter and via N keyboard shortcut
 - [x] Toggle task done/open, cycle priority P1→P2→P3 by clicking badge
 - [x] Defer and drop tasks from the ... menu
 - [x] Ideas tab: add idea, toggle done, drop
 - [x] Habits tab: shows habits, toggle works, add/delete works
-- [x] Projects tab: add project with area, archive project (now shows in Archived section immediately)
+- [x] Projects tab: add project with area, archive project
 - [x] TASKS nav dropdown links navigate to correct tabs
-- [x] No console errors on any tab (build clean)
-- [x] Deployed to Vercel and live URL working
+- [x] No console errors on any tab
+- [x] Deployed to Vercel and working on live URL
 
 ### What Was Built
 - `src/hooks/useTasksPage.js` — flexible tasks hook (by type, all statuses, full CRUD)
-- `src/hooks/useProjects.js` — projects CRUD (archive bug fixed)
+- `src/hooks/useProjects.js` — projects CRUD
 - `src/components/tasks/TaskRow.jsx` — task item with checkbox, priority badge (click to cycle), defer/drop/delete menu
 - `src/components/tasks/TaskQuickAdd.jsx` — quick-add input with N keyboard shortcut
 - `src/components/tasks/StatusFilter.jsx` — OPEN/ALL/DONE/DEFERRED filter pills
@@ -86,6 +149,10 @@ IN PROGRESS — Journal module built and compiled. Needs `journal_entries` table
 - `src/components/tasks/ProjectsTab.jsx` — projects list with add/archive
 - `src/pages/Tasks.jsx` — tab controller using URL search params (?tab=quick|ideas|habits|projects)
 - `src/components/layout/TopNav.jsx` — TASKS dropdown updated with ?tab= query params
+
+### Bugs Fixed
+- `useHabits.js` was using `toISOString()` for today's date — wrong date west of UTC after 8pm EDT. Fixed to local date string.
+- `archiveProject` was removing project from state entirely on archive — fixed to update status so Archived section reflects immediately.
 
 ---
 
@@ -104,11 +171,10 @@ IN PROGRESS — Journal module built and compiled. Needs `journal_entries` table
 - [x] Drag-and-drop assigns tasks to gaps
 - [x] No console errors
 - [x] Deployed to Vercel and working on live URL
-- [x] PROGRESS.md updated
 
 ### What Was Built
 - `src/hooks/useTasks.js` — today's tasks, optimistic add, toggle completion
-- `src/hooks/useHabits.js` — active habits + today's logs, toggle/add/delete (UTC date bug fixed in Phase 4 session)
+- `src/hooks/useHabits.js` — active habits + today's logs, toggle/add/delete
 - `src/hooks/useStats.js` — weekly task count, habit streak, calendar hours (local-time date strings)
 - `src/components/home/QuickAddTask.jsx` — Enter-to-submit task input
 - `src/components/home/TaskList.jsx` — task list with completion checkbox
@@ -121,30 +187,19 @@ IN PROGRESS — Journal module built and compiled. Needs `journal_entries` table
 - `src/pages/Home.jsx` — all placeholder sections replaced with live components
 - `src/pages/Plan.jsx` — /plan page with DndContext, assignment state, DragOverlay
 - `src/App.jsx` — /plan route registered
-- `src/components/layout/TopNav.jsx` — PLAN nav link added (before SETTINGS)
+- `src/components/layout/TopNav.jsx` — PLAN nav link added
 
-### Supabase Tables Added This Phase
+### Supabase Tables Added
 - `tasks` — title, type, status, priority, due_date, project_id, completed_at
-- `habits` — name, active, sort_order (seeded: Gym, Creatine, Stretch, Read)
+- `habits` — name, active, sort_order
 - `habit_logs` — habit_id, date, completed (UNIQUE on habit_id+date)
-- `projects` — title, status, area (created but not yet used in UI)
-
-### Bugs Fixed This Session
-- `useStats` was using `toISOString()` for habit log date comparisons — wrong date west of UTC late at night. Fixed with `localDateStr()` helper using local `getFullYear/Month/Date`.
-- `useCalendar` / stats calendar hours query was missing `.eq('all_day', false)` — all-day events were inflating HOURS LOGGED. Fixed.
-- `useTasks.fetchTasks` was silently swallowing Supabase errors — added `console.error` and kept existing task list on error.
-
----
-
-## Future Enhancements
-
-- **Calendar** — make fully interactive with add/edit/delete events via Google Calendar API
+- `projects` — title, status, area
 
 ---
 
 ## Phase 1 — Calendar Module — COMPLETE (2026-06-20)
 
-### Exit Criteria (all verified on live Vercel URL)
+### Exit Criteria
 - [x] OAuth flow works — clicking Connect redirects to Google
 - [x] After auth, tokens row exists in Supabase tokens table
 - [x] Sync button fetches real events — calendar_events table populates
@@ -153,30 +208,21 @@ IN PROGRESS — Journal module built and compiled. Needs `journal_entries` table
 - [x] Home dashboard calendar strip shows real today's events
 - [x] No console errors on any route
 - [x] Deployed to Vercel and working on live URL
-- [x] PROGRESS.md updated
 
-### What was built
+### What Was Built
 - `api/auth/google.js` — OAuth redirect with offline access + calendar.readonly scope
 - `api/auth/callback.js` — code exchange, token upsert to Supabase
 - `api/calendar-sync.js` — token refresh, -28d/+56d window, upsert on google_event_id
 - `src/hooks/useCalendar.js` — isConnected, events, sync, view, navigate
-- `src/components/calendar/ConnectPrompt.jsx`
-- `src/components/calendar/CalendarHeader.jsx`
-- `src/components/calendar/EventBlock.jsx` — absolute grid positioning
-- `src/components/calendar/WeekView.jsx` — 7-column grid, all-day row, current time indicator
-- `src/components/calendar/DayView.jsx` — single-day timeline
+- `src/components/calendar/` — ConnectPrompt, CalendarHeader, EventBlock, WeekView, DayView
 - `src/pages/Calendar.jsx` — three states: loading / disconnected / connected
-- `src/pages/Home.jsx` — live today events from Supabase
 - `vercel.json` — SPA rewrite so api/ serverless functions are reachable
-
-### Fix applied this session
-`vercel.json` was missing, causing Vercel's Vite preset to 404 on `/api/auth/callback`. Added minimal SPA rewrite — Vercel checks serverless functions before applying rewrites, so API routes are unaffected.
 
 ---
 
 ## Phase 0 — Foundation Shell — COMPLETE (2026-06-19)
 
-### Exit Criteria (all verified)
+### Exit Criteria
 - [x] All routes load without errors
 - [x] Top nav active state correct for each route
 - [x] Bottom nav on mobile, top nav on desktop
@@ -189,3 +235,17 @@ IN PROGRESS — Journal module built and compiled. Needs `journal_entries` table
 - [x] Responsive down to 375px
 - [x] No console errors on any route
 - [x] Deployed to Vercel and live URL confirmed working
+
+---
+
+## Known Issues / Tech Debt
+
+- `useStats` shows `0`, `0/0 days`, `0h` briefly on first paint — no loading skeleton (cosmetic only)
+- `durationLabel` helper duplicated in `GapSlot.jsx` and `PlanTimeline.jsx` — extract to `src/components/plan/utils.js` when next touching those files
+- DnD assignments on /plan are session-only (by design) — refreshing clears them
+- React Router future-flag deprecation warnings in console — benign until React Router v7
+- No "Dropped" filter on Tasks — dropped tasks are soft-deleted and not recoverable via UI
+
+## Future Enhancements
+
+- Calendar — add/edit/delete events via Google Calendar API
