@@ -4,7 +4,7 @@
 Phase 6 — Personal CRM
 
 ## Status
-NOT STARTED — Phase 5 complete and verified in dev. Ready to begin Phase 6.
+NOT STARTED — Phase 5 complete and verified on live Vercel URL. Ready to begin Phase 6.
 
 ## Next Session Starts With
 
@@ -14,7 +14,7 @@ Phase 6 — Personal CRM. See PLAN.md section 8 for scope: migrate Notion CRM da
 
 ## Phase 5 — Time Audit Module — COMPLETE (2026-06-30)
 
-### Exit Criteria (verified in dev at localhost, not yet deployed to Vercel)
+### Exit Criteria (all verified — dev + live Vercel URL)
 - [x] /time loads with 3 tabs: Log, Analytics, Categories
 - [x] Log tab: today's calendar events appear as pre-populated time blocks (seeded via upsert on google_calendar_event_id)
 - [x] Click a block → enrichment panel opens inline
@@ -25,7 +25,7 @@ Phase 6 — Personal CRM. See PLAN.md section 8 for scope: migrate Notion CRM da
 - [x] Analytics tab: hours by category for current week as horizontal bar chart
 - [x] Categories tab: list of categories, add new (name + color swatch), remove
 - [x] No console errors on any tab
-- [ ] Deployed to Vercel and working on live URL — **not yet done, see below**
+- [x] Deployed to Vercel and working on live URL
 
 ### What Was Built
 - `src/hooks/useCategories.js` — categories CRUD, ordered by sort_order
@@ -50,7 +50,6 @@ Phase 6 — Personal CRM. See PLAN.md section 8 for scope: migrate Notion CRM da
 - **GapBlock defaulted to the entire gap span**: clicking "+ Add block" in a wide-open gap (e.g. a full empty day, 6am–11pm) created a 17-hour block instead of a reasonable window. Fixed by adding start/end `<input type="time">` fields defaulting to a 30-minute window from the gap start, clamped within the gap. Caught via manual browser testing, not the test suite — added `GapBlock.test.jsx` to lock in the fix.
 
 ### Known Issues / Follow-ups
-- Not yet deployed to Vercel — dev-only verification so far. Next session (or before starting Phase 6) should `git push` and confirm on the live URL.
 - Two independent `useCategories()` calls run on `/time` (one in `Time.jsx` for the Log tab, one inside `CategoryManager`) — harmless (both just re-fetch the same small table) but could be lifted to a single shared fetch if it ever matters.
 - `supabase/phase5_time_audit.sql` (the original, full migration) is now dead weight for fresh setups if this exact partial-failure mode recurs — kept for reference alongside the `_fix` variant.
 
