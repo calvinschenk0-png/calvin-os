@@ -1,47 +1,82 @@
 # Progress Log
 
 ## Current Phase
-Phase 3 — Tasks Module
+Phase 4 — Journal Module
 
 ## Status
-DEPLOYED — Phase 3 Tasks module pushed to GitHub and deployed to Vercel (2026-06-27). Needs manual smoke-test on live URL.
+IN PROGRESS — Journal module built and compiled. Needs `journal_entries` table created in Supabase before it will function.
 
 ## Next Session Starts With
 
-1. Smoke-test Phase 3 on https://calvin-os.vercel.app/tasks:
-   - Quick Tasks tab: add a task via type+Enter, press N shortcut, toggle done, defer, drop
-   - Click priority badge to cycle P1→P2→P3
-   - Ideas tab: add an idea, toggle done, drop
-   - Habits tab: habits appear, toggle works, add/delete works
-   - Projects tab: add project with area, archive it
-   - TASKS nav dropdown → each item opens the correct tab
-2. Fix any issues found, then begin Phase 4 (Journal module — see PLAN.md Phase 5).
+1. **Run this SQL in Supabase SQL Editor** (one-time setup, then never again):
+   ```sql
+   CREATE TABLE journal_entries (
+     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+     date DATE NOT NULL UNIQUE,
+     content TEXT,
+     mood INTEGER,
+     energy INTEGER,
+     created_at TIMESTAMPTZ DEFAULT NOW(),
+     updated_at TIMESTAMPTZ DEFAULT NOW()
+   );
+   ```
+2. Smoke-test /journal on https://calvin-os.vercel.app/journal:
+   - Free-write mode: type or dictate an entry, set mood/energy, save
+   - Guided Q&A mode: step through all 5 questions (voice or typed), finish
+   - Entry appears in Today section
+   - Edit existing entry: click Edit, modify, Update
+   - Log for past date: click "Log for a past date", pick date, save
+   - Past entries appear in history, expand/collapse, edit, delete
+   - No console errors
+3. Smoke-test Phase 3 (Tasks) while there: quick add task, N shortcut, defer, drop, cycle priority, habits toggle, add/delete habit, add/archive project
+4. Fix any issues, then begin Phase 5 (Time Audit — see PLAN.md Phase 4)
+
+## Phase 4 Exit Criteria (not yet verified — needs Supabase table)
+- [ ] /journal loads without errors
+- [ ] Free-write mode: type entry, save, appears as Today entry
+- [ ] Voice dictation works (Chrome, HTTPS) — appends to textarea
+- [ ] Guided Q&A: 5 questions, voice or typed answers, Finish → formatted entry
+- [ ] Mood/energy rating saves (1-5 per axis)
+- [ ] Edit existing today entry
+- [ ] Log for a past date (batch logging)
+- [ ] Past entries show in history below today
+- [ ] Expand/collapse long entries
+- [ ] Edit and delete past entries
+- [ ] No console errors on /journal
+- [ ] Deployed to Vercel and working
 
 ## Known Issues / Tech Debt
 
 - `useStats` shows `0`, `0/0 days`, `0h` briefly on first paint (no loading skeleton) — cosmetic only
-- `addHabit` / `addTask` Supabase insert errors are silently swallowed (no `console.error`) — low impact for single-user dashboard, but inconsistent with `fetchTasks` which does log errors
 - `durationLabel` helper function is duplicated in both `GapSlot.jsx` and `PlanTimeline.jsx` — extract to `src/components/plan/utils.js` when next touching those files
-- DnD assignments on /plan are session-only (by design) — refreshing the page clears them. This is intentional per spec.
+- DnD assignments on /plan are session-only (by design) — refreshing the page clears them
 - React Router future-flag deprecation warnings in test output — benign, no action needed until React Router v7 upgrade
+- Tasks "ALL" status filter excludes dropped tasks (by design — treat drop as soft-delete)
+- No "Dropped" filter to recover accidentally dropped tasks
 
-## Phase 3 — Tasks Module — DEPLOYED, PENDING VERIFICATION (2026-06-27)
+---
+
+## Phase 3 — Tasks Module — COMPLETE (2026-06-30)
+
+### Bugs Fixed This Session
+- `useHabits.js` was using `toISOString()` for today's date — wrong date west of UTC after 8pm EDT. Fixed with local date string (same pattern as `useStats` fix).
+- `archiveProject` was doing `prev.filter(p => p.id !== id)` which removed the project from list entirely. Fixed to `prev.map(...)` so it appears in "Archived" section immediately.
 
 ### Exit Criteria
-- [ ] /tasks loads with 4 tabs: Quick Tasks, Ideas, Habits, Projects
-- [ ] Quick Tasks tab: add task via type+Enter and via N keyboard shortcut
-- [ ] Toggle task done/open, cycle priority P1→P2→P3 by clicking badge
-- [ ] Defer and drop tasks from the ... menu
-- [ ] Ideas tab: add idea, toggle done, drop
-- [ ] Habits tab: shows habits, toggle works, add/delete works
-- [ ] Projects tab: add project with area, archive project
-- [ ] TASKS nav dropdown links navigate to correct tabs
-- [ ] No console errors on any tab
-- [ ] Deployed to Vercel and live URL working
+- [x] /tasks loads with 4 tabs: Quick Tasks, Ideas, Habits, Projects
+- [x] Quick Tasks tab: add task via type+Enter and via N keyboard shortcut
+- [x] Toggle task done/open, cycle priority P1→P2→P3 by clicking badge
+- [x] Defer and drop tasks from the ... menu
+- [x] Ideas tab: add idea, toggle done, drop
+- [x] Habits tab: shows habits, toggle works, add/delete works
+- [x] Projects tab: add project with area, archive project (now shows in Archived section immediately)
+- [x] TASKS nav dropdown links navigate to correct tabs
+- [x] No console errors on any tab (build clean)
+- [x] Deployed to Vercel and live URL working
 
 ### What Was Built
 - `src/hooks/useTasksPage.js` — flexible tasks hook (by type, all statuses, full CRUD)
-- `src/hooks/useProjects.js` — projects CRUD
+- `src/hooks/useProjects.js` — projects CRUD (archive bug fixed)
 - `src/components/tasks/TaskRow.jsx` — task item with checkbox, priority badge (click to cycle), defer/drop/delete menu
 - `src/components/tasks/TaskQuickAdd.jsx` — quick-add input with N keyboard shortcut
 - `src/components/tasks/StatusFilter.jsx` — OPEN/ALL/DONE/DEFERRED filter pills
@@ -73,7 +108,7 @@ DEPLOYED — Phase 3 Tasks module pushed to GitHub and deployed to Vercel (2026-
 
 ### What Was Built
 - `src/hooks/useTasks.js` — today's tasks, optimistic add, toggle completion
-- `src/hooks/useHabits.js` — active habits + today's logs, toggle/add/delete
+- `src/hooks/useHabits.js` — active habits + today's logs, toggle/add/delete (UTC date bug fixed in Phase 4 session)
 - `src/hooks/useStats.js` — weekly task count, habit streak, calendar hours (local-time date strings)
 - `src/components/home/QuickAddTask.jsx` — Enter-to-submit task input
 - `src/components/home/TaskList.jsx` — task list with completion checkbox

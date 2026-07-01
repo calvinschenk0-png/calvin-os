@@ -29,7 +29,7 @@ export function useProjects() {
   }, [])
 
   const archiveProject = useCallback(async (id) => {
-    setProjects(prev => prev.filter(p => p.id !== id))
+    setProjects(prev => prev.map(p => p.id === id ? { ...p, status: 'archived' } : p))
     await supabase.from('projects').update({ status: 'archived' }).eq('id', id)
   }, [])
 
