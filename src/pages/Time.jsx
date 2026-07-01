@@ -16,7 +16,7 @@ export default function Time() {
   const [searchParams, setSearchParams] = useSearchParams()
   const activeTab = TABS.find(t => t.id === searchParams.get('tab'))?.id || 'log'
   const [date, setDate] = useState(new Date())
-  const { categories } = useCategories()
+  const { categories, isLoading: categoriesLoading, addCategory, deleteCategory } = useCategories()
 
   function setTab(id) {
     setSearchParams({ tab: id })
@@ -81,7 +81,14 @@ export default function Time() {
       )}
 
       {activeTab === 'analytics' && <CategoryAnalytics />}
-      {activeTab === 'categories' && <CategoryManager />}
+      {activeTab === 'categories' && (
+        <CategoryManager
+          categories={categories}
+          isLoading={categoriesLoading}
+          addCategory={addCategory}
+          deleteCategory={deleteCategory}
+        />
+      )}
     </div>
   )
 }

@@ -1,10 +1,8 @@
 import { useState } from 'react'
-import { useCategories } from '../../hooks/useCategories'
 
 const SWATCHES = ['#FF3D00', '#737373', '#4A9EFF', '#A78BFA', '#34D399', '#F59E0B', '#EC4899', '#6B7280']
 
-export function CategoryManager() {
-  const { categories, isLoading, addCategory, deleteCategory } = useCategories()
+export function CategoryManager({ categories, isLoading, addCategory, deleteCategory }) {
   const [name, setName] = useState('')
   const [color, setColor] = useState(SWATCHES[0])
 
