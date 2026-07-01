@@ -18,9 +18,9 @@ const NAV_LINKS = [
   {
     label: 'TIME', path: '/time',
     children: [
-      { label: 'LOG', path: '/time' },
-      { label: 'ANALYTICS', path: '/time' },
-      { label: 'CATEGORIES', path: '/time' },
+      { label: 'LOG', path: '/time?tab=log' },
+      { label: 'ANALYTICS', path: '/time?tab=analytics' },
+      { label: 'CATEGORIES', path: '/time?tab=categories' },
     ],
   },
   { label: 'JOURNAL', path: '/journal' },

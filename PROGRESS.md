@@ -1,95 +1,58 @@
 # Progress Log
 
 ## Current Phase
-Phase 5 — Time Audit Module
+Phase 6 — Personal CRM
 
 ## Status
-NOT STARTED — Phase 4 complete and verified on live URL. Ready to begin Phase 5.
+NOT STARTED — Phase 5 complete and verified in dev. Ready to begin Phase 6.
 
 ## Next Session Starts With
 
-### Phase 5 — Time Audit — Kickoff
+Phase 6 — Personal CRM. See PLAN.md section 8 for scope: migrate Notion CRM data to Supabase, contact list with weekly triage view, contact detail page (history/notes/next step/meetings), meeting log, birthday reminders, contact search.
 
-**Goal:** Calvin can complete his evening time audit in under 10 minutes, starting from pre-populated calendar blocks.
+---
 
-**Step 1 — Run these migrations in Supabase SQL Editor before writing any code:**
+## Phase 5 — Time Audit Module — COMPLETE (2026-06-30)
 
-```sql
--- Categories (primary/secondary hierarchy)
-CREATE TABLE categories (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name TEXT NOT NULL,
-  parent_id UUID REFERENCES categories(id),
-  color TEXT,
-  sort_order INTEGER DEFAULT 0
-);
+### Exit Criteria (verified in dev at localhost, not yet deployed to Vercel)
+- [x] /time loads with 3 tabs: Log, Analytics, Categories
+- [x] Log tab: today's calendar events appear as pre-populated time blocks (seeded via upsert on google_calendar_event_id)
+- [x] Click a block → enrichment panel opens inline
+- [x] Assign primary category to a block and save → badge appears on block
+- [x] Add optional notes to a block
+- [x] Gaps ≥ 15 minutes show a "+ Add block" slot (day bounds 6am–11pm)
+- [x] Add a manual block in a gap (title, time range via start/end time inputs, category)
+- [x] Analytics tab: hours by category for current week as horizontal bar chart
+- [x] Categories tab: list of categories, add new (name + color swatch), remove
+- [x] No console errors on any tab
+- [ ] Deployed to Vercel and working on live URL — **not yet done, see below**
 
--- Seed default categories (edit to match Calvin's actual life areas)
-INSERT INTO categories (name, color, sort_order) VALUES
-  ('Deep Work',    '#FF3D00', 1),
-  ('Admin',        '#737373', 2),
-  ('Meetings',     '#4A9EFF', 3),
-  ('Learning',     '#A78BFA', 4),
-  ('Health',       '#34D399', 5),
-  ('Personal',     '#F59E0B', 6),
-  ('Social',       '#EC4899', 7),
-  ('Transit',      '#6B7280', 8);
+### What Was Built
+- `src/hooks/useCategories.js` — categories CRUD, ordered by sort_order
+- `src/hooks/useTimeBlocks.js` — blocks for a date, `seedFromCalendar` (upserts calendar_events into time_blocks on google_calendar_event_id), create/update/delete
+- `src/hooks/useCategoryAnalytics.js` — current week hours-per-category aggregation
+- `src/components/time/utils.js` — `computeGaps` (6am–11pm day bounds, 15min threshold), `formatTime`, `durationLabel`
+- `src/components/time/TimelineBlock.jsx` — block row with category badge, click to open enrichment
+- `src/components/time/BlockEnrichment.jsx` — inline category/secondary/notes editor, delete (manual blocks only)
+- `src/components/time/GapBlock.jsx` — "+ Add block" row, expands to title + start/end time inputs + category picker
+- `src/components/time/DayTimeline.jsx` — merges blocks + gaps into one sorted timeline, seeds from calendar on date change
+- `src/components/time/CategoryAnalytics.jsx` — weekly bar chart
+- `src/components/time/CategoryManager.jsx` — category list + add form with color swatches
+- `src/pages/Time.jsx` — tab controller using URL search params (?tab=log|analytics|categories), day navigation on Log tab
+- `src/components/layout/TopNav.jsx` — TIME dropdown links updated to `?tab=` query params
 
--- Time blocks (the core enrichment table)
-CREATE TABLE time_blocks (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  date DATE NOT NULL,
-  started_at TIMESTAMPTZ NOT NULL,
-  ended_at TIMESTAMPTZ NOT NULL,
-  title TEXT,
-  primary_category_id UUID REFERENCES categories(id),
-  secondary_category_id UUID REFERENCES categories(id),
-  notes TEXT,
-  google_calendar_event_id TEXT,
-  energy_level INTEGER,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
+### Supabase Tables Added This Phase
+- `categories` — name, parent_id, color, sort_order (8 default categories seeded)
+- `time_blocks` — date, started_at, ended_at, title, primary/secondary_category_id, notes, google_calendar_event_id (UNIQUE — required for upsert seeding), energy_level
 
--- Time block ↔ contacts (many-to-many, for when contacts table exists)
-CREATE TABLE time_block_contacts (
-  time_block_id UUID REFERENCES time_blocks(id) ON DELETE CASCADE,
-  contact_id UUID REFERENCES contacts(id) ON DELETE CASCADE,
-  PRIMARY KEY (time_block_id, contact_id)
-);
-```
+### Bugs Fixed During This Session
+- **Migration ran partially**: the SQL editor executed `CREATE TABLE categories` but stopped before the `INSERT` seed rows and the `CREATE TABLE time_blocks` statement — cause unconfirmed. Diagnosed via direct REST calls to the Supabase API (categories returned `200 []`, time_blocks returned `404 PGRST205`). Fixed with `supabase/phase5_time_audit_fix.sql`, a script safe to run against that exact partial state (seeds categories, creates time_blocks only).
+- **GapBlock defaulted to the entire gap span**: clicking "+ Add block" in a wide-open gap (e.g. a full empty day, 6am–11pm) created a 17-hour block instead of a reasonable window. Fixed by adding start/end `<input type="time">` fields defaulting to a 30-minute window from the gap start, clamped within the gap. Caught via manual browser testing, not the test suite — added `GapBlock.test.jsx` to lock in the fix.
 
-Note: `contacts` table doesn't exist yet — create `time_block_contacts` only after Phase 6 (CRM). For now, just create `categories` and `time_blocks`.
-
-**Step 2 — Build order:**
-
-1. `src/hooks/useCategories.js` — fetch all categories, ordered by sort_order
-2. `src/hooks/useTimeBlocks.js` — fetch blocks for a date, create/update/delete
-3. `src/components/time/TimelineBlock.jsx` — single block bar: title + duration + category badge. Click to open enrichment panel.
-4. `src/components/time/BlockEnrichment.jsx` — slide-out or inline panel: category picker (primary + secondary), notes textarea, save
-5. `src/components/time/GapBlock.jsx` — unlogged gap between blocks. Click "+ Add block" to create a manual block
-6. `src/components/time/DayTimeline.jsx` — renders the full day as stacked blocks + gaps. Pulls from calendar_events for seed, time_blocks for enriched data
-7. `src/components/time/CategoryAnalytics.jsx` — simple bar chart: hours per category for the week
-8. `src/pages/Time.jsx` — tab layout: LOG (today's timeline) | ANALYTICS (week summary) | CATEGORIES (manage category list)
-
-**Step 3 — Key decisions to make before coding:**
-
-- **Sync strategy:** When the user opens the LOG tab for a date, auto-seed time_blocks from calendar_events (where google_calendar_event_id is set). If a block for that event already exists, don't re-create it. Use an upsert on `google_calendar_event_id`.
-- **Gap detection:** Compute gaps between blocks client-side from the sorted block list. A gap ≥ 15 minutes gets a GapBlock. Day starts at 6am, ends at 11pm for display purposes.
-- **Category picker UX:** Flat list of categories with color swatch. No nested UI needed — parent_id is for future grouping, not required in the picker.
-- **Analytics scope:** Week view only for now. Show hours per primary category as horizontal bars. Date range: Mon–Sun of current week.
-
-**Exit Criteria:**
-- [ ] /time loads with 3 tabs: Log, Analytics, Categories
-- [ ] Log tab: today's calendar events appear as pre-populated time blocks
-- [ ] Click a block → enrichment panel opens inline
-- [ ] Assign primary category to a block and save → badge appears on block
-- [ ] Add optional notes to a block
-- [ ] Gaps ≥ 15 minutes show a "+ Add block" slot
-- [ ] Add a manual block in a gap (title, time range, category)
-- [ ] Analytics tab: hours by category for current week as bar chart
-- [ ] Categories tab: list of categories, add new, reorder or hide
-- [ ] No console errors on any tab
-- [ ] Deployed to Vercel and working on live URL
+### Known Issues / Follow-ups
+- Not yet deployed to Vercel — dev-only verification so far. Next session (or before starting Phase 6) should `git push` and confirm on the live URL.
+- Two independent `useCategories()` calls run on `/time` (one in `Time.jsx` for the Log tab, one inside `CategoryManager`) — harmless (both just re-fetch the same small table) but could be lifted to a single shared fetch if it ever matters.
+- `supabase/phase5_time_audit.sql` (the original, full migration) is now dead weight for fresh setups if this exact partial-failure mode recurs — kept for reference alongside the `_fix` variant.
 
 ---
 
