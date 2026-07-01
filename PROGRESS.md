@@ -4,11 +4,81 @@
 Phase 6 — Personal CRM
 
 ## Status
-NOT STARTED — Phase 5 complete and verified on live Vercel URL. Ready to begin Phase 6.
+NOT STARTED — Phase 5 complete (all exit criteria met, including the post-deploy category-sync fix) and verified on live Vercel URL. Ready to begin Phase 6.
 
 ## Next Session Starts With
 
-Phase 6 — Personal CRM. See PLAN.md section 8 for scope: migrate Notion CRM data to Supabase, contact list with weekly triage view, contact detail page (history/notes/next step/meetings), meeting log, birthday reminders, contact search.
+### Phase 6 — Personal CRM — Kickoff
+
+**Goal:** Calvin can complete his weekly CRM review without opening Notion.
+
+**Step 1 — Open questions to resolve with Calvin before writing migration SQL or code:**
+- **Notion export**: what form is the existing CRM data in — Notion API access, a CSV export, or manual copy-paste? The migration script depends entirely on the source format; don't guess at a schema mapping.
+- **"Pipeline" tab**: `TopNav.jsx`'s CRM dropdown already has CONTACTS / PIPELINE / MEETINGS sub-links (added in Phase 0, never built out). Confirm what "Pipeline" means here — sales-style stages, or just an alias for the weekly triage view described in PLAN.md section 8. If it's redundant with triage, simplify the dropdown instead of building a fourth thing.
+- **Birthday reminders**: in-app only (banner/widget on Home or CRM) for now, no email/push — confirm that's still the scope.
+
+**Step 2 — Migration SQL (schema per PLAN.md section 6, with a `birthday` column added since Phase 6's exit criteria requires birthday reminders and the original schema didn't have one):**
+
+```sql
+CREATE TABLE contacts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL,
+  type TEXT, -- 'personal' | 'professional' | 'deloitte'
+  company TEXT,
+  role TEXT,
+  email TEXT,
+  phone TEXT,
+  birthday DATE,
+  notes TEXT,
+  last_contacted_at TIMESTAMPTZ,
+  next_followup_at TIMESTAMPTZ,
+  next_step TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE contact_meetings (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  contact_id UUID REFERENCES contacts(id) ON DELETE CASCADE,
+  date DATE NOT NULL,
+  notes TEXT,
+  next_followup_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Deferred from Phase 5 — contacts now exists, so this join table can be created
+CREATE TABLE time_block_contacts (
+  time_block_id UUID REFERENCES time_blocks(id) ON DELETE CASCADE,
+  contact_id UUID REFERENCES contacts(id) ON DELETE CASCADE,
+  PRIMARY KEY (time_block_id, contact_id)
+);
+```
+
+**Lesson from Phase 5:** the last migration silently ran partway (categories table created but empty, time_blocks never created) with no visible error. After running this script, verify all three tables directly via the Supabase REST API (`GET .../rest/v1/contacts?select=*`, etc. with the anon key) before writing any application code against them — don't assume the SQL editor ran cleanly just because it didn't show an error in chat.
+
+**Step 3 — Build order:**
+1. Notion migration script (one-time, run manually — depends on Step 1 answer)
+2. `src/hooks/useContacts.js` — CRUD, ordered by `next_followup_at`
+3. `src/hooks/useContactMeetings.js` — meetings for a contact, add/update
+4. `src/components/crm/ContactRow.jsx` — list row with next-step/follow-up date
+5. `src/components/crm/ContactDetail.jsx` — history, notes, next step, meeting log
+6. `src/components/crm/WeeklyTriage.jsx` — surfaces overdue/due contacts, one-tap defer or act
+7. `src/components/crm/MeetingLogForm.jsx` — log a meeting: contact, notes, next reminder
+8. `src/components/crm/BirthdayReminders.jsx` — upcoming birthdays widget
+9. `src/components/crm/ContactSearch.jsx`
+10. `src/pages/CRM.jsx` — tab layout resolving the CONTACTS/PIPELINE/MEETINGS question from Step 1
+
+**Exit Criteria:**
+- [ ] Notion CRM data migrated into `contacts` (and `contact_meetings` if applicable)
+- [ ] /crm loads with a contact list
+- [ ] Weekly triage view surfaces overdue/due contacts, one-tap defer or act
+- [ ] Contact detail page shows history, notes, next step, meetings
+- [ ] Meeting log: pick a contact, add notes, set next follow-up reminder
+- [ ] Birthday reminders visible somewhere in the UI
+- [ ] Contact search works
+- [ ] CRM nav dropdown links navigate to the right views
+- [ ] No console errors on any CRM view
+- [ ] Deployed to Vercel and verified on the live URL
 
 ---
 
@@ -48,9 +118,9 @@ Phase 6 — Personal CRM. See PLAN.md section 8 for scope: migrate Notion CRM da
 ### Bugs Fixed During This Session
 - **Migration ran partially**: the SQL editor executed `CREATE TABLE categories` but stopped before the `INSERT` seed rows and the `CREATE TABLE time_blocks` statement — cause unconfirmed. Diagnosed via direct REST calls to the Supabase API (categories returned `200 []`, time_blocks returned `404 PGRST205`). Fixed with `supabase/phase5_time_audit_fix.sql`, a script safe to run against that exact partial state (seeds categories, creates time_blocks only).
 - **GapBlock defaulted to the entire gap span**: clicking "+ Add block" in a wide-open gap (e.g. a full empty day, 6am–11pm) created a 17-hour block instead of a reasonable window. Fixed by adding start/end `<input type="time">` fields defaulting to a 30-minute window from the gap start, clamped within the gap. Caught via manual browser testing, not the test suite — added `GapBlock.test.jsx` to lock in the fix.
+- **Category add/remove didn't sync between Log and Categories tabs** (reported by Calvin after initial deploy): `CategoryManager` called its own `useCategories()` instance, separate from the one `Time.jsx` passed to `DayTimeline`/`GapBlock` for the Log tab's category chips. Adding or removing a category updated `CategoryManager`'s local state but left the Log tab stale until a hard refresh. Fixed by lifting the single `useCategories()` call to `Time.jsx` and passing `categories`/`isLoading`/`addCategory`/`deleteCategory` down as props to `CategoryManager`, so both tabs read from and mutate one shared source. Added `CategoryManager.test.jsx` to lock in prop-driven behavior. Verified live: add/remove a category on the Categories tab, switch to Log tab, chip list updates instantly with no reload. Commit `d2126ca`.
 
 ### Known Issues / Follow-ups
-- Two independent `useCategories()` calls run on `/time` (one in `Time.jsx` for the Log tab, one inside `CategoryManager`) — harmless (both just re-fetch the same small table) but could be lifted to a single shared fetch if it ever matters.
 - `supabase/phase5_time_audit.sql` (the original, full migration) is now dead weight for fresh setups if this exact partial-failure mode recurs — kept for reference alongside the `_fix` variant.
 
 ---
